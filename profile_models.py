@@ -39,6 +39,7 @@ class Person(BaseEntity):
 @dataclass
 class Target(Person):
     partners : List[Person] = field(default_factory=list)
+    parents : List[Person] = field(default_factory=list)
     children : List[Person] = field(default_factory=list)
     pets : List[Pet] = field(default_factory=list)
     special_keywords : List[str] = field(default_factory=list)
