@@ -4,6 +4,44 @@ from datetime import date
 from utils import DateUtils
 
 @dataclass
+class GeneratorConfig:
+    min_length: int = 6
+    max_length: int = 20
+
+    enable_case_mutations: bool = True
+    enable_reverse: bool = True
+
+    leet_level: int = 1 # 0 = none, 1 = low, 2 = medium
+    leet_map: dict = field(default_factory=lambda: {
+        'a': ['4', '@'], 'e': ['3'], 'i': ['1', '!'], 'o': ['0'], 's': ['5', '$'], 't': ['7']
+    })
+
+    max_combination_depth: int = 3
+
+    add_special_chars: bool = True
+    special_chars: List[str] = field(default_factory=lambda: ['!', '@', '#', '$', '%', '?'])
+
+    separators: List[str] = field(default_factory=lambda: ['', '.', '_', '-', '!', "and", '&', "+", "xoxo", "1", "lol", "XD"])
+
+    add_common_numbers: bool = True
+    year_padding: int = 2
+
+    bruteforce_mode: bool = False
+
+    word_leet_threshold: int = 12  # max length for applying leet transformations
+
+
+    def __post_init__(self):
+        if self.min_length > self.max_length:
+            raise ValueError(f"Min length ({self.min_length}) cannot be greater than max length ({self.max_length})")
+        
+        if self.leet_level not in [0, 1, 2]:
+            raise ValueError("Leet level must be 0, 1, or 2")
+
+
+
+
+@dataclass
 class BaseEntity:
     name : str
     nickname : Optional[str] = None
@@ -44,6 +82,7 @@ class Target(Person):
     pets : List[Pet] = field(default_factory=list)
     special_keywords : List[str] = field(default_factory=list)
     special_dates : List[date] = field(default_factory=list)
+    special_numbers : List[str] = field(default_factory=list)
 
     def add_partner(self, partner: Person):
         self.partners.append(partner)
