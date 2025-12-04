@@ -24,6 +24,10 @@ class GeneratorConfig:
     separators: List[str] = field(default_factory=lambda: ['', '.', '_', '-', '!', "and", '&', "+", "xoxo", "1", "lol", "XD"])
 
     add_common_numbers: bool = True
+    common_numbers: List[str] = field(default_factory=lambda: [
+        '123', '1234', '12345', '007', '69', '420', '666', '777', '888', '999', '111', '000', '1', '12', '123456', '123456789', '0', '01', '21', '11', '13', '19', '20', '2000', '2010', '2020' , '2468', '1357', '69', '420', '911', '67', '88', '246'
+    ])
+
     year_padding: int = 2
 
     bruteforce_mode: bool = False
