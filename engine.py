@@ -22,8 +22,6 @@ class PasswordGenerator:
             if lower_c in self.config.leet_map:
                 opts.update(self.config.leet_map[lower_c])
             
-            if self.config.bruteforce_mode and len(word) <= self.config.word_leet_threshold: # to avoid combinatorial explosion
-                opts.add(char.swapcase())
         
             char_options.append(list(opts))
         
@@ -32,8 +30,6 @@ class PasswordGenerator:
     def _apply_case_mutations(self, word: str) -> List[str]:
         if not self.config.enable_case_mutations:
             return [word]
-        if self.config.bruteforce_mode:
-            return [word] #already handled in leet generation
         options = [(char.lower(), char.upper()) for char in word]
 
         mutations = [''.join(chars) for chars in itertools.product(*options)]
@@ -56,12 +52,13 @@ class PasswordGenerator:
         for keyword in raw_keywords:
             case_forms = set(self._generate_leet(keyword))
             case_forms.update(self._apply_case_mutations(keyword))
-
-            reversed_forms = set(
-                itertools.chain.from_iterable(self._apply_reverse(cf) for cf in case_forms)
-            )
-            case_forms.update(reversed_forms)
-
+            if self.config.bruteforce_mode:
+                reversed_forms = set(
+                    itertools.chain.from_iterable(self._apply_reverse(cf) for cf in case_forms)
+                )
+                case_forms.update(reversed_forms)
+            else:
+                case_forms.update(self._apply_reverse(keyword))
             all_keyword_variants.append(list(case_forms))
 
         return all_keyword_variants
@@ -90,45 +87,66 @@ class PasswordGenerator:
         specials = self.config.special_chars if self.config.add_special_chars else ['']
         separators = self.config.separators
 
+        # Max passwords cap
+        limit = self.config.max_passwords if self.config.max_passwords is not None and self.config.max_passwords > 0 else None
+        count = 0
+
         #strategy 1: single keywords
         for k in flat_keywords:
+            if limit is not None and count >= limit:
+                return
             if self._is_valid_length(k):
+                count += 1
                 yield k
         
         #strategy 2: keyword + suffix combinations
         suffixes = number_pool.union(date_pool)
         for k, sep, suf in itertools.product(flat_keywords, separators, suffixes):
+            if limit is not None and count >= limit:
+                return
             password = f"{k}{sep}{suf}" # keyword+separator+suffix example: ali&1992 ,ali1992
             if self._is_valid_length(password):
+                count += 1
                 yield password
             password = f"{suf}{sep}{k}" # suffix+separator+keyword example: 1992&ali ,1992ali
             if self._is_valid_length(password):
+                count += 1
                 yield password
             
             #strategy 3: strategy 2 with special chars
             if self.config.add_special_chars:
                 for special in specials:
+                    if limit is not None and count >= limit:
+                        return
                     password = f"{k}{sep}{suf}{special}" # keyword+separator+suffix+special example: ali&1992!
                     if self._is_valid_length(password):
+                        count += 1
                         yield password
                     password = f"{special}{k}{sep}{suf}" # special+keyword+separator+suffix example: !ali&1992
                     if self._is_valid_length(password):
+                        count += 1
                         yield password
                     password = f"{suf}{sep}{k}{special}" # suffix+separator+keyword+special example: 1992&ali!
                     if self._is_valid_length(password):
+                        count += 1
                         yield password
                     password = f"{special}{suf}{sep}{k}" # special+suffix+separator+keyword example: !1992&ali
                     if self._is_valid_length(password):
+                        count += 1
                         yield password
 
         #strategy 4: keyword + special
         if self.config.add_special_chars:
             for k, special in itertools.product(flat_keywords, specials):
+                if limit is not None and count >= limit:
+                    return
                 password = f"{k}{special}" # keyword+special example: ali!
                 if self._is_valid_length(password):
+                    count += 1
                     yield password
                 password = f"{special}{k}" # special+keyword example: !ali
                 if self._is_valid_length(password):
+                    count += 1
                     yield password
 
         # strategy 5: Multi-Word Combinations
@@ -139,6 +157,9 @@ class PasswordGenerator:
                         # Base: wordA+separator+wordB example: ali&Wonder
                         password = f"{word_a}{sep}{word_b}"
                         if self._is_valid_length(password):
+                            count += 1
+                            if limit is not None and count > limit:
+                                return
                             yield password
 
                         # strategy 6: Multi-Word Combinations with suffix (and special chars)
@@ -160,6 +181,9 @@ class PasswordGenerator:
                                     continue 
                                 
                                 for p in suffix_variations:
+                                    count += 1
+                                    if limit is not None and count > limit:
+                                        return
                                     yield p
 
                                 # --- Suffix + Special Char Combinations ---
@@ -202,4 +226,7 @@ class PasswordGenerator:
 
                                         # Yield all generated variations (length checked via test_len optimization)
                                         for p in special_variations:
+                                            count += 1
+                                            if limit is not None and count > limit:
+                                                return
                                             yield p  

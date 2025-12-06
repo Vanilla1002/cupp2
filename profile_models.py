@@ -16,7 +16,7 @@ class GeneratorConfig:
         'a': ['4', '@'], 'e': ['3'], 'i': ['1', '!'], 'o': ['0'], 's': ['5', '$'], 't': ['7']
     })
 
-    max_combination_depth: int = 3
+    max_combination_depth: int = 2
 
     add_special_chars: bool = True
     special_chars: List[str] = field(default_factory=lambda: ['!', '@', '#', '$', '%', '?'])
@@ -28,11 +28,12 @@ class GeneratorConfig:
         '123', '1234', '12345', '007', '69', '420', '666', '777', '888', '999', '111', '000', '1', '12', '123456', '123456789', '0', '01', '21', '11', '13', '19', '20', '2000', '2010', '2020' , '2468', '1357', '69', '420', '911', '67', '88', '246'
     ])
 
-    year_padding: int = 2
+    
+    word_leet_threshold: int = 12  # max length for applying leet transformations
 
     bruteforce_mode: bool = False
 
-    word_leet_threshold: int = 12  # max length for applying leet transformations
+    max_passwords: Optional[int] = 1000000000  # 100 million by default, None for unlimited 
 
 
     def __post_init__(self):
@@ -41,6 +42,9 @@ class GeneratorConfig:
         
         if self.leet_level not in [0, 1, 2]:
             raise ValueError("Leet level must be 0, 1, or 2")
+        
+        if self.max_passwords is not None and self.max_passwords < 0:
+            raise ValueError("max_passwords must be >= 0 when specified")
 
 
 
