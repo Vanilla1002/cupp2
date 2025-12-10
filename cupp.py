@@ -193,6 +193,11 @@ def _build_config_from_args(args) -> GeneratorConfig:
         cfg.add_common_numbers = False
     if getattr(args, "bruteforce", False):
         cfg.bruteforce_mode = True
+    try:
+        cfg.__post_init__()  # re-validate after overrides
+    except ValueError as ve:
+        print(f"Configuration error after applying overrides: {ve}")
+        sys.exit(2)
     return cfg
 
 def _run_interactive_with_overrides(args):
