@@ -2,9 +2,11 @@
 from profile_models import GeneratorConfig, Target
 from profile_models import Person, Pet
 from engine import PasswordGenerator
+from utils import banner
 from datetime import date
 import argparse
 from typing import Optional, List
+import sys
 
 def _ask(prompt: str, default: Optional[str] = None) -> str:
     p = f"{prompt}"
@@ -199,28 +201,48 @@ def _run_interactive_with_overrides(args):
     run_interactive(cfg)
 
 def main():
-    parser = argparse.ArgumentParser(description="CUPP2 — Contextual password generator")
-    parser.add_argument("-i", "--interactive", action="store_true", help="Run interactive CLI prompts")
-    # Config override flags (used only with -i)
-    parser.add_argument("--min-length", type=int, help="Override minimum password length")
-    parser.add_argument("--max-length", type=int, help="Override maximum password length")
-    parser.add_argument("--max-passwords", type=int, help="Override max passwords to generate")
-    parser.add_argument("--leet-level", type=int, choices=[0,1,2], help="Set leet level: 0,1,2")
-    parser.add_argument("--no-case-mutations", action="store_true", help="Disable case mutations")
-    parser.add_argument("--no-reverse", action="store_true", help="Disable reverse mutations")
-    parser.add_argument("--no-special-chars", action="store_true", help="Disable adding special characters")
-    parser.add_argument("--separators", type=str, help="Comma-separated list of separators (e.g., ',-,_,!')")
-    parser.add_argument("--max-depth", type=int, help="Set max combination depth (e.g., 2 or 3)")
-    parser.add_argument("--no-common-numbers", action="store_true", help="Do not include common numbers")
-    parser.add_argument("--bruteforce", action="store_true", help="Enable bruteforce mode (more variants)")
+    parser = argparse.ArgumentParser(
+        description=banner,
+        formatter_class=argparse.RawTextHelpFormatter,
+        add_help=False  
+    )
+
+    # --- Group 1: Main Execution Modes ---
+    mode_group = parser.add_argument_group("  Execution Mode")
+    mode_group.add_argument("-h", "--help", action="help", help="Show this help message and exit")
+    mode_group.add_argument("-i", "--interactive", action="store_true", help="Start the interactive generation wizard")
+
+    # --- Group 2: Configuration Overrides ---
+    config_group = parser.add_argument_group(
+        "  Configuration Overrides", 
+        "  (Optional flags to customize generation behavior when using -i)"
+    )
+    
+    config_group.add_argument("--min-length", type=int, metavar="N", help="Set minimum password length")
+    config_group.add_argument("--max-length", type=int, metavar="N", help="Set maximum password length")
+    config_group.add_argument("--max-passwords", type=int, metavar="N", help="Limit number of passwords generated")
+    config_group.add_argument("--leet-level", type=int, choices=[0,1,2], metavar="LVL", help="Leet substitution level (0, 1, or 2)")
+    config_group.add_argument("--max-depth", type=int, metavar="N", help="Max combination depth (e.g., 2 or 3)")
+    config_group.add_argument("--separators", type=str, metavar="CHARS", help="Comma-separated separators (e.g. ',-,_,!')")
+    
+    # Boolean flags
+    config_group.add_argument("--bruteforce", action="store_true", help="Enable bruteforce mode (creates more variants)")
+    config_group.add_argument("--no-case-mutations", action="store_true", help="Disable case mutations (Capitalization)")
+    config_group.add_argument("--no-reverse", action="store_true", help="Disable reverse mutations")
+    config_group.add_argument("--no-special-chars", action="store_true", help="Disable special characters")
+    config_group.add_argument("--no-common-numbers", action="store_true", help="Disable appending common numbers")
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
     args = parser.parse_args()
 
     if args.interactive:
         _run_interactive_with_overrides(args)
     else:
+        # If user provides flags but forgets -i, we can hint them or just show help
         parser.print_help()
 
 if __name__ == "__main__":
     main()
-
-
