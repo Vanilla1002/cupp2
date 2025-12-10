@@ -1,0 +1,28 @@
+{
+  "generator": {
+    "min_length": 6,
+    "max_length": 20,
+    "enable_case_mutations": true,
+    "enable_reverse": true,
+    "leet_level": 1,
+    "leet_map": {
+      "a": ["4", "@"],
+      "e": ["3"],
+      "i": ["1", "!"],
+      "o": ["0"],
+      "s": ["5", "$"],
+      "t": ["7"]
+    },
+    "max_combination_depth": 2,
+    "add_special_chars": true,
+    "special_chars": ["!", "@", "#", "$", "%", "?"],
+    "separators": ["", ".", "_", "-", "!", "and", "&", "+", "xoxo", "1", "lol", "XD"],
+    "add_common_numbers": true,
+    "common_numbers": [
+      "123", "1234", "12345", "007", "69", "420", "666", "777", "888", "999", "111", "000", "1", "12", "123456", "123456789", "0", "01", "21", "11", "13", "19", "20", "2000", "2010", "2020", "2468", "1357", "69", "420", "911", "67", "88", "246"
+    ],
+    "word_leet_threshold": 12,
+    "bruteforce_mode": false,
+    "max_passwords": 1000000000
+  }
+}
