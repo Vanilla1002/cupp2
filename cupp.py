@@ -66,11 +66,11 @@ def _ask_date(prompt: str) -> Optional[date]:
             print("Date must be exactly 8 digits (MMDDYYYY or DDMMYYYY). Please try again or leave blank to skip.")
             continue
         try:
-            mm = int(s[0:2]); dd = int(s[2:4]); yyyy = int(s[4:8])
+            dd = int(s[0:2]); mm = int(s[2:4]); yyyy = int(s[4:8])
             try:
                 return date(yyyy, mm, dd)
             except ValueError:
-                return date(yyyy, dd, mm)
+                return date(yyyy, dd, mm)       
         except Exception:
             print("Invalid date value. Please try again or leave blank to skip.")
             continue
@@ -112,8 +112,11 @@ def _collect_pets() -> List[Pet]:
         pets.append(_collect_pet())
     return pets
 
-def run_interactive():
-    print("Interactive mode: answer the following about your target.")
+def run_interactive(cfg: Optional[GeneratorConfig] = None):
+    print("Interactive mode: answer the following about your target.\n")
+    print("blank entries will be skipped\n")
+    print("---------------------------------\n")
+    
     # Core identity (use person collector)
     target_person = _collect_person("Target")
 
@@ -135,9 +138,8 @@ def run_interactive():
         if d:
             special_dates.append(d)
 
-    # Config (use sensible defaults, ask for max length/count)
-
-    cfg = GeneratorConfig()
+    # Config: use provided cfg or load from file by default
+    cfg = cfg or GeneratorConfig.from_file()
 
     target = Target(
         name=target_person.name,
@@ -163,13 +165,58 @@ def run_interactive():
         count += 1
     print(f"\nTotal: {count}")
 
+def _build_config_from_args(args) -> GeneratorConfig:
+    """Load config from file and apply overrides from CLI args (only used with -i)."""
+    cfg = GeneratorConfig.from_file()
+    # Apply overrides if provided
+    if getattr(args, "min_length", None) is not None:
+        cfg.min_length = args.min_length
+    if getattr(args, "max_length", None) is not None:
+        cfg.max_length = args.max_length
+    if getattr(args, "max_passwords", None) is not None:
+        cfg.max_passwords = args.max_passwords
+    if getattr(args, "leet_level", None) is not None:
+        cfg.leet_level = args.leet_level
+    if getattr(args, "no_case_mutations", False):
+        cfg.enable_case_mutations = False
+    if getattr(args, "no_reverse", False):
+        cfg.enable_reverse = False
+    if getattr(args, "no_special_chars", False):
+        cfg.add_special_chars = False
+    if getattr(args, "separators", None):
+        cfg.separators = [s.strip() for s in args.separators.split(',') if s.strip() != '']
+    if getattr(args, "max_depth", None) is not None:
+        cfg.max_combination_depth = args.max_depth
+    if getattr(args, "no_common_numbers", False):
+        cfg.add_common_numbers = False
+    if getattr(args, "bruteforce", False):
+        cfg.bruteforce_mode = True
+    return cfg
+
+def _run_interactive_with_overrides(args):
+    """Run interactive flow using config built from args; affects only -i path."""
+    cfg = _build_config_from_args(args)
+    run_interactive(cfg)
+
 def main():
     parser = argparse.ArgumentParser(description="CUPP2 — Contextual password generator")
     parser.add_argument("-i", "--interactive", action="store_true", help="Run interactive CLI prompts")
+    # Config override flags (used only with -i)
+    parser.add_argument("--min-length", type=int, help="Override minimum password length")
+    parser.add_argument("--max-length", type=int, help="Override maximum password length")
+    parser.add_argument("--max-passwords", type=int, help="Override max passwords to generate")
+    parser.add_argument("--leet-level", type=int, choices=[0,1,2], help="Set leet level: 0,1,2")
+    parser.add_argument("--no-case-mutations", action="store_true", help="Disable case mutations")
+    parser.add_argument("--no-reverse", action="store_true", help="Disable reverse mutations")
+    parser.add_argument("--no-special-chars", action="store_true", help="Disable adding special characters")
+    parser.add_argument("--separators", type=str, help="Comma-separated list of separators (e.g., ',-,_,!')")
+    parser.add_argument("--max-depth", type=int, help="Set max combination depth (e.g., 2 or 3)")
+    parser.add_argument("--no-common-numbers", action="store_true", help="Do not include common numbers")
+    parser.add_argument("--bruteforce", action="store_true", help="Enable bruteforce mode (more variants)")
     args = parser.parse_args()
 
     if args.interactive:
-        run_interactive()
+        _run_interactive_with_overrides(args)
     else:
         parser.print_help()
 
