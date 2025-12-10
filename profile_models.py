@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
+import json
+import os
 from datetime import date
 from utils import DateUtils
 
@@ -45,6 +47,50 @@ class GeneratorConfig:
         
         if self.max_passwords is not None and self.max_passwords < 0:
             raise ValueError("max_passwords must be >= 0 when specified")
+
+    @classmethod
+    def from_dict(cls, cfg: dict):
+        gen = cfg.get("generator", cfg)  # allow root or nested under "generator"
+        return cls(
+            min_length=gen.get("min_length", cls.min_length),
+            max_length=gen.get("max_length", cls.max_length),
+            enable_case_mutations=gen.get("enable_case_mutations", cls.enable_case_mutations),
+            enable_reverse=gen.get("enable_reverse", cls.enable_reverse),
+            leet_level=gen.get("leet_level", cls.leet_level),
+            leet_map=gen.get("leet_map", cls.leet_map),
+            max_combination_depth=gen.get("max_combination_depth", cls.max_combination_depth),
+            add_special_chars=gen.get("add_special_chars", cls.add_special_chars),
+            special_chars=gen.get("special_chars", cls.special_chars),
+            separators=gen.get("separators", cls.separators),
+            add_common_numbers=gen.get("add_common_numbers", cls.add_common_numbers),
+            common_numbers=gen.get("common_numbers", cls.common_numbers),
+            word_leet_threshold=gen.get("word_leet_threshold", cls.word_leet_threshold),
+            bruteforce_mode=gen.get("bruteforce_mode", cls.bruteforce_mode),
+            max_passwords=gen.get("max_passwords", cls.max_passwords),
+        )
+
+    @classmethod
+    def from_file(cls, path: Optional[str] = None):
+        """Load configuration from a JSON file. Defaults to `config.json` in project root."""
+        candidates = []
+        if path:
+            candidates.append(path)
+        # Try project root `config.json`
+        candidates.append(os.path.join(os.getcwd(), "config.json"))
+        # Try alongside this module
+        candidates.append(os.path.join(os.path.dirname(__file__), "config.json"))
+
+        for p in candidates:
+            try:
+                if os.path.exists(p):
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    return cls.from_dict(data)
+            except Exception:
+                # Fall through to next candidate; validation happens in __post_init__
+                continue
+        # If no file found or failed to load, return default config
+        return cls()
 
 
 
