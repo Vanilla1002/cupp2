@@ -1,4 +1,5 @@
 import itertools
+from logging import config
 from typing import Iterator, List
 from profile_models import Target, GeneratorConfig
 from utils import DateUtils
@@ -230,3 +231,46 @@ class PasswordGenerator:
                                             if limit is not None and count > limit:
                                                 return
                                             yield p  
+    def estimate_password_count(self) -> int:
+        keyword_pools = self._build_base_word_pool()
+        flat_keywords = set(itertools.chain.from_iterable(keyword_pools))
+        len_keywords = len(flat_keywords)
+
+        date_pool = set(self._dates_pool())
+        number_pool = set(self._numbers_pool())
+        if self.config.add_common_numbers:
+            number_pool.update(self.config.common_numbers)
+        len_suf = len(number_pool)
+
+        separators = self.config.separators
+        len_separators = len(separators) if separators else 1  
+
+        if self.config.add_special_chars:
+            len_specials = len(self.config.special_chars)
+        else:
+            len_specials = 0
+        
+        len_pairs = 0
+        if self.config.max_combination_depth >= 2:
+            for group_a, group_b in itertools.permutations(keyword_pools, 2):
+                len_pairs += len(group_a) * len(group_b)
+            
+        total_count = 0
+
+        total_count += len_keywords  # Single keywords
+        total_count += 2 * len_keywords * len_separators * len_suf  # Keyword + Suffix combinations
+        total_count += 4 * len_keywords * len_separators * len_suf * len_specials  # Strategy 3 variations 
+        total_count += 2 * len_keywords * len_specials  # Keyword + Special combinations
+
+        if self.config.max_combination_depth >= 2:
+
+            total_count += len_pairs * len_separators  # Multi-Word Combinations
+
+            if self.config.max_combination_depth >= 3:
+                vars_per_suffix = (3 * len_separators) + (len_separators - 1) # Base variations
+                total_count += len_pairs * len_suf * vars_per_suffix  # Strategy 6 base variations
+
+                if len_specials > 0:
+                    vars_per_special = (10 * len_separators) + (4 * (len_separators - 1))  # Special variations 
+                    total_count += len_pairs * len_suf * len_specials * vars_per_special  # Strategy 6 special variations
+        return total_count
