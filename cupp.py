@@ -2,7 +2,7 @@
 from profile_models import GeneratorConfig, Target
 from profile_models import Person, Pet
 from engine import PasswordGenerator
-from utils import banner
+from utils import banner, estimate_file_size, number_to_human_readable
 from datetime import date
 import argparse
 from typing import Optional, List
@@ -114,7 +114,7 @@ def _collect_pets() -> List[Pet]:
         pets.append(_collect_pet())
     return pets
 
-def run_interactive(cfg: Optional[GeneratorConfig] = None):
+def run_interactive(cfg: Optional[GeneratorConfig] = None, output_path: Optional[str] = None):
     print("Interactive mode: answer the following about your target.\n")
     print("blank entries will be skipped\n")
     print("---------------------------------\n")
@@ -160,15 +160,35 @@ def run_interactive(cfg: Optional[GeneratorConfig] = None):
     )
 
     gen = PasswordGenerator(target, cfg)
-    print("\nGenerated passwords:\n")
-    count = 0
-    for pw in gen.generate_passwords():
-        print(pw)
-        count += 1
-    print(f"\nTotal: {count}")
+
+    password_count = gen.estimate_password_count()
+    if password_count > cfg.max_passwords:
+        print(f"notice Estimated password count ({password_count:,}) exceeds max_passwords limit ({cfg.max_passwords:,}).")
+        password_count = cfg.max_passwords
+    
+    print(f"\nEstimated number of passwords to be generated: {password_count:,}  ({number_to_human_readable(password_count)})")
+    size_estimate = estimate_file_size(password_count, cfg.min_length, cfg.max_length)
+    print(f"Estimated output file size: {size_estimate}\n")
+    if not _ask_yes_no("Proceed with generation?", True):
+        print("Generation cancelled.")
+        return
+    # Decide output file name
+    if output_path:
+        outfile = output_path
+    else:
+        base = (target_person.name.strip() if target_person.name and target_person.name.strip() else "target")
+        outfile = f"{base}.txt"
+
+    try:
+        with open(outfile, "w", encoding="utf-8") as f:
+            for pw in gen.generate_passwords():
+                f.write(pw + "\n")
+        print(f"Saved {outfile}")
+    except Exception as e:
+        print(f"Failed to write output file '{outfile}': {e}")
+        
 
 def _build_config_from_args(args) -> GeneratorConfig:
-    """Load config from file and apply overrides from CLI args (only used with -i)."""
     cfg = GeneratorConfig.from_file()
     # Apply overrides if provided
     if getattr(args, "min_length", None) is not None:
@@ -203,7 +223,7 @@ def _build_config_from_args(args) -> GeneratorConfig:
 def _run_interactive_with_overrides(args):
     """Run interactive flow using config built from args; affects only -i path."""
     cfg = _build_config_from_args(args)
-    run_interactive(cfg)
+    run_interactive(cfg, output_path=getattr(args, "output", None))
 
 def main():
     parser = argparse.ArgumentParser(
@@ -216,6 +236,7 @@ def main():
     mode_group = parser.add_argument_group("  Execution Mode")
     mode_group.add_argument("-h", "--help", action="help", help="Show this help message and exit")
     mode_group.add_argument("-i", "--interactive", action="store_true", help="Start the interactive generation wizard")
+    mode_group.add_argument("-o", "--output", type=str, metavar="FILE", help="Output file path (defaults to '<target>.txt' or 'target.txt')")
 
     # --- Group 2: Configuration Overrides ---
     config_group = parser.add_argument_group(
