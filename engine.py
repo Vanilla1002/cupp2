@@ -47,8 +47,14 @@ class PasswordGenerator:
         for relation in self.target.parents + self.target.children + self.target.partners + self.target.pets:
             raw_keywords.update(relation.get_keywords())
 
+        if self.target.name:
+            raw_keywords.add(self.target.name[0:1].lower())
+            raw_keywords.add(self.target.name[0:1].upper())
+        if self.target.family_name:
+            raw_keywords.add(self.target.family_name[0:1].lower())
+            raw_keywords.add(self.target.family_name[0:1].upper())
+        
         raw_keywords.update(self.target.special_keywords)
-
         all_keyword_variants = []   
         for keyword in raw_keywords:
             case_forms = set(self._generate_leet(keyword))
@@ -93,7 +99,7 @@ class PasswordGenerator:
         count = 0
 
         #strategy 1: single keywords
-        for k in flat_keywords:
+        for k in (flat_keywords | number_pool | date_pool):
             if limit is not None and count >= limit:
                 return
             if self._is_valid_length(k):
